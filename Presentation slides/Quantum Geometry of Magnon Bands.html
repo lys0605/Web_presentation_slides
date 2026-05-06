@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Quantum Geometry of Magnon Bands & Raman Scattering — Y. S. Liu</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+
+<style>
+  html, body { margin: 0; padding: 0; background: #0b0d12; color: #ece7d8; font-family: "EB Garamond", Georgia, serif; }
+  /* KaTeX inherits color */
+  .katex { color: inherit !important; }
+  .katex .mord { color: inherit; }
+  /* hide deck-stage's default chrome a touch */
+</style>
+
+<script type="application/json" id="speaker-notes">
+[
+  "Welcome. Today: how the geometry of magnon bands — Berry curvature and quantum metric — shows up directly in polarized Raman scattering. Three parts: geometry, light coupling, predictions for monolayer CrI3.",
+  "Magnon bands have geometry too. Thermal Hall and INS are sensitive to the bands but not directly the geometry. Photons through Fleury–Loudon couple to spin pairs. Claim: polarized two-magnon Raman is a local probe of magnon Berry curvature and metric.",
+  "Three movements. Part I — geometry of the bands. Part II — Fleury–Loudon and how the vertex carries geometric info. Part III — predictions for monolayer CrI3 and how to tell topological from trivial.",
+  "Section divider — Part I: the quantum geometry of magnon bands.",
+  "Holstein–Primakoff to a BdG Hamiltonian. Diagonalised by a paraunitary matrix preserving sigma_3 — that's the bosonic Bogoliubov structure.",
+  "Berry connection and curvature defined with the paraunitary inner product. In 2D ferromagnets only Omega_xy survives. TR is broken by ordering — any term that opens the Dirac point at K generates curvature.",
+  "Fubini–Study tensor splits into real metric g and imaginary curvature Omega/2. Metric measures distance between Bloch states; curvature measures their twist. det g >= |Omega|^2 / 4.",
+  "Integrating Omega over the BZ gives the Chern number — non-zero implies chiral edge modes and thermal Hall response.",
+  "CrI3 — honeycomb ferromagnet, S=3/2, easy-axis. Heisenberg + next-nearest DM + anisotropy. The DM term is the Haldane mass that opens the K-gap.",
+  "Two magnon bands, gap at K of about 2 meV from DM. Without DM, Dirac point. Tweak shows the gapless reference.",
+  "Berry curvature concentrates at K, K' valleys with opposite signs. Lower band has flipped sign — Chern numbers +/-1.",
+  "Section divider — Part II: light–matter coupling for magnons.",
+  "Fleury–Loudon: off-resonant exchange-light vertex. Photons modulate J via virtual hopping. R-hat is bilinear in spins, quadratic in polarisation.",
+  "Acting on the FM ground state R-hat creates two magnons of opposite k. The matrix element M_nm carries the band geometry.",
+  "Polarisation channels project R-hat onto irreps of D3d. xx, xy, R+L-, R+R+ each pick out different combinations of g and Omega.",
+  "Combine paraunitary diagonalisation with Fleury–Loudon. Key identity: in cross-circular polarisation, |M|^2 equals the inter-band quantum geometric tensor weighted by frequencies.",
+  "Inserting the geometric form into I(omega) gives the Raman response as a delta-weighted integral of g + Omega — the central result.",
+  "Section divider — Part III: probing geometry with light, predictions for CrI3.",
+  "Predicted CrI3 spectrum: broad two-magnon continuum up to 2 omega_max with a step at 2 Delta_K.",
+  "Three signatures: cross-circular dichroism that flips with magnetisation, sub-gap step at 2 Delta_K in xy, integrated weight tracks the Chern number.",
+  "Direct test: tune DM via strain or interlayer coupling. Cross-circular intensity scales with |D|. Caveat: phonon backgrounds.",
+  "Comparison table — INS sees bands, thermal Hall integrates Omega to a single number; circular Raman is the only probe that gives k-summed Omega frequency-resolved AND sign.",
+  "Summary: magnon bands carry geometry; Fleury–Loudon projects it; cross-circular Raman is direct probe; CrI3 prediction.",
+  "Thank you. Questions?"
+]
+</script>
+</head>
+<body>
+
+<deck-stage width="1920" height="1080">
+  <section><div id="slot-0"></div></section>
+  <section><div id="slot-1"></div></section>
+  <section><div id="slot-2"></div></section>
+  <section><div id="slot-3"></div></section>
+  <section><div id="slot-4"></div></section>
+  <section><div id="slot-5"></div></section>
+  <section><div id="slot-6"></div></section>
+  <section><div id="slot-7"></div></section>
+  <section><div id="slot-8"></div></section>
+  <section><div id="slot-9"></div></section>
+  <section><div id="slot-10"></div></section>
+  <section><div id="slot-11"></div></section>
+  <section><div id="slot-12"></div></section>
+  <section><div id="slot-13"></div></section>
+  <section><div id="slot-14"></div></section>
+  <section><div id="slot-15"></div></section>
+  <section><div id="slot-16"></div></section>
+  <section><div id="slot-17"></div></section>
+  <section><div id="slot-18"></div></section>
+  <section><div id="slot-19"></div></section>
+  <section><div id="slot-20"></div></section>
+  <section><div id="slot-21"></div></section>
+  <section><div id="slot-22"></div></section>
+  <section><div id="slot-23"></div></section>
+</deck-stage>
+
+<script src="deck-stage.js"></script>
+
+<!-- React -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="tokens.jsx"></script>
+<script type="text/babel" src="primitives.jsx"></script>
+<script type="text/babel" src="figures.jsx"></script>
+<script type="text/babel" src="slides.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<script type="text/babel" data-presets="env,react">
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "palette": "cyan",
+  "showEquations": true,
+  "titleStyle": "noun",
+  "figVariant": "default"
+}/*EDITMODE-END*/;
+
+function App() {
+  const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const palette = PALETTES[tweaks.palette] || PALETTES.cyan;
+  const eqOn = !!tweaks.showEquations;
+  const titleStyle = tweaks.titleStyle || "noun";
+  const figVariant = tweaks.figVariant || "default";
+
+  // background sync
+  React.useEffect(() => {
+    document.body.style.background = palette.bg;
+    document.body.style.color = palette.ink;
+  }, [palette]);
+
+  const total = 24;
+  const ctx = { palette, total, eqOn, titleStyle, figVariant };
+
+  const slides = [
+    (n) => <S.cover {...ctx} num={n} />,
+    (n) => <S.motivation {...ctx} num={n} />,
+    (n) => <S.outline {...ctx} num={n} />,
+    (n) => <S.partI {...ctx} num={n} />,
+    (n) => <S.lswt {...ctx} num={n} />,
+    (n) => <S.berry {...ctx} num={n} />,
+    (n) => <S.metric {...ctx} num={n} />,
+    (n) => <S.topology {...ctx} num={n} />,
+    (n) => <S.cri3 {...ctx} num={n} />,
+    (n) => <S.cri3bands {...ctx} num={n} />,
+    (n) => <S.cri3berry {...ctx} num={n} />,
+    (n) => <S.partII {...ctx} num={n} />,
+    (n) => <S.fleury {...ctx} num={n} />,
+    (n) => <S.twomag {...ctx} num={n} />,
+    (n) => <S.polarization {...ctx} num={n} />,
+    (n) => <S.formalism {...ctx} num={n} />,
+    (n) => <S.geomintegral {...ctx} num={n} />,
+    (n) => <S.partIII {...ctx} num={n} />,
+    (n) => <S.cri3raman {...ctx} num={n} />,
+    (n) => <S.polsig {...ctx} num={n} />,
+    (n) => <S.toptrivial {...ctx} num={n} />,
+    (n) => <S.compare {...ctx} num={n} />,
+    (n) => <S.summary {...ctx} num={n} />,
+    (n) => <S.thanks {...ctx} num={n} />,
+  ];
+
+  return (
+    <>
+      {slides.map((render, i) => {
+        const slot = document.getElementById("slot-" + i);
+        if (!slot) return null;
+        return ReactDOM.createPortal(render(i + 1), slot);
+      })}
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection title="Palette">
+          <TweakSelect
+            label="Accent"
+            value={tweaks.palette}
+            options={[
+              { value: "cyan", label: "Cyan / magenta" },
+              { value: "amber", label: "Amber / teal" },
+              { value: "violet", label: "Violet / lime" },
+            ]}
+            onChange={(v) => setTweak("palette", v)}
+          />
+        </TweakSection>
+        <TweakSection title="Display">
+          <TweakToggle
+            label="Show equations"
+            value={tweaks.showEquations}
+            onChange={(v) => setTweak("showEquations", v)}
+          />
+          <TweakRadio
+            label="Title style"
+            value={tweaks.titleStyle}
+            options={[
+              { value: "noun", label: "Noun-phrase" },
+              { value: "action", label: "Action" },
+            ]}
+            onChange={(v) => setTweak("titleStyle", v)}
+          />
+        </TweakSection>
+        <TweakSection title="Figures">
+          <TweakRadio
+            label="Slide 10 — magnon bands"
+            value={tweaks.figVariant}
+            options={[
+              { value: "default", label: "DM gap" },
+              { value: "nogap", label: "Gapless" },
+            ]}
+            onChange={(v) => setTweak("figVariant", v)}
+          />
+        </TweakSection>
+      </TweaksPanel>
+    </>
+  );
+}
+
+// Wait for KaTeX to load before mounting (so initial Eq renders are correct)
+function mount() {
+  if (!window.katex) return setTimeout(mount, 50);
+  if (!window.S) return setTimeout(mount, 50);
+  const root = document.createElement("div");
+  document.body.appendChild(root);
+  ReactDOM.createRoot(root).render(<App />);
+}
+mount();
+</script>
+
+</body>
+</html>

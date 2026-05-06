@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slide Editor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#0a0b0f;color:#ece7d8;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;font-size:13px}
+#editor-root{display:grid;grid-template-rows:48px 1fr;height:100vh;overflow:hidden}
+/* Toolbar */
+#toolbar{display:flex;align-items:center;gap:8px;padding:0 14px;background:#161b24;border-bottom:1px solid #2a3140;flex-shrink:0;user-select:none}
+#toolbar-title{font-size:13px;font-weight:600;color:#ece7d8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
+#toolbar-mid{display:flex;align-items:center;gap:6px;margin:0 auto}
+.tb-btn{appearance:none;border:1px solid #2a3140;background:#1c2230;color:#b4ad9b;font:inherit;font-size:12px;height:28px;padding:0 10px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;transition:background 120ms,color 120ms}
+.tb-btn:hover{background:#243040;color:#ece7d8}
+.tb-btn.primary{background:#7dd3fc;color:#0a0b0f;border-color:#7dd3fc;font-weight:600}
+.tb-btn.primary:hover{background:#93dafe}
+.tb-btn.icon{padding:0;width:28px;justify-content:center;font-size:15px}
+#slide-counter{font-size:12px;color:#6a6657;font-variant-numeric:tabular-nums;min-width:60px;text-align:center}
+/* Body 3-column */
+#editor-body{display:grid;grid-template-columns:210px 1fr 410px;overflow:hidden;height:100%}
+/* Slide list sidebar */
+#slide-list{overflow-y:auto;overflow-x:hidden;background:#11151c;border-right:1px solid #2a3140;display:flex;flex-direction:column;gap:0}
+#slide-list::-webkit-scrollbar{width:6px}
+#slide-list::-webkit-scrollbar-track{background:transparent}
+#slide-list::-webkit-scrollbar-thumb{background:#2a3140;border-radius:3px}
+.slide-item{display:flex;align-items:stretch;gap:0;cursor:pointer;border-bottom:1px solid #1a2030;transition:background 100ms}
+.slide-item:hover{background:#161b24}
+.slide-item.active{background:#1c2436}
+.slide-num{width:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-family:'JetBrains Mono',monospace;color:#6a6657;padding:10px 0;font-variant-numeric:tabular-nums}
+.slide-item.active .slide-num{color:#7dd3fc}
+.slide-thumb-wrap{width:112px;height:63px;overflow:hidden;position:relative;flex-shrink:0;background:#0b0d12;margin:6px 0}
+.slide-thumb-inner{width:1920px;height:1080px;transform:scale(0.05833);transform-origin:top left;pointer-events:none}
+.slide-label-col{display:flex;align-items:center;padding:0 8px 0 6px;font-size:11px;color:#b4ad9b;line-height:1.3;flex:1;min-width:0;word-break:break-word}
+.slide-item.active .slide-label-col{color:#ece7d8}
+/* Canvas area */
+#canvas-area{display:flex;align-items:center;justify-content:center;background:#08090c;overflow:hidden;position:relative}
+#canvas-wrap{position:relative;flex-shrink:0}
+#canvas-inner{position:absolute;inset:0}
+#canvas-border{position:absolute;inset:-1px;border:1px solid #2a3140;pointer-events:none;z-index:1}
+/* Side panel */
+#side-panel{display:flex;flex-direction:column;background:#11151c;border-left:1px solid #2a3140;overflow:hidden}
+#panel-tabs{display:flex;border-bottom:1px solid #2a3140;flex-shrink:0}
+.ptab{flex:1;appearance:none;border:0;background:transparent;color:#6a6657;font:inherit;font-size:12px;height:36px;cursor:pointer;border-bottom:2px solid transparent;transition:color 120ms,border-color 120ms}
+.ptab:hover{color:#b4ad9b}
+.ptab.active{color:#7dd3fc;border-bottom-color:#7dd3fc}
+#panel-body{flex:1;overflow:hidden;position:relative}
+.tab-content{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden}
+.tab-content.hidden{display:none}
+/* Code tab */
+#file-selector{display:flex;gap:4px;padding:8px 10px;border-bottom:1px solid #2a3140;flex-shrink:0;flex-wrap:wrap}
+.file-btn{appearance:none;border:1px solid #2a3140;background:transparent;color:#6a6657;font:11px 'JetBrains Mono',monospace;height:22px;padding:0 8px;border-radius:4px;cursor:pointer;transition:all 120ms}
+.file-btn:hover{border-color:#b4ad9b;color:#b4ad9b}
+.file-btn.active{background:#1c2436;border-color:#7dd3fc;color:#7dd3fc}
+#code-editor{flex:1;resize:none;background:#0d1117;color:#e0ddd6;font:13px/1.6 'JetBrains Mono',monospace;border:0;outline:none;padding:12px;tab-size:2;white-space:pre;overflow:auto}
+#code-editor::-webkit-scrollbar{width:6px;height:6px}
+#code-editor::-webkit-scrollbar-thumb{background:#2a3140;border-radius:3px}
+#code-actions{display:flex;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid #2a3140;flex-shrink:0;background:#11151c}
+#apply-btn{appearance:none;border:1px solid #7dd3fc;background:#7dd3fc;color:#0a0b0f;font:inherit;font-size:12px;font-weight:600;height:28px;padding:0 14px;border-radius:6px;cursor:pointer;transition:all 120ms}
+#apply-btn:hover{background:#93dafe}
+#apply-hint{font-size:11px;color:#6a6657}
+#error-box{margin:0 10px 8px;padding:8px 10px;background:#2a0d0d;border:1px solid #7f1d1d;border-radius:6px;color:#fca5a5;font:11px/1.5 'JetBrains Mono',monospace;white-space:pre-wrap;word-break:break-all;max-height:100px;overflow-y:auto;flex-shrink:0}
+#success-box{margin:0 10px 8px;padding:8px 10px;background:#0d2a14;border:1px solid #14532d;border-radius:6px;color:#86efac;font-size:12px;flex-shrink:0}
+/* Tweaks tab */
+.tweak-section{padding:12px 14px 0;font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#6a6657}
+.tweak-row{display:flex;flex-direction:column;gap:6px;padding:10px 14px}
+.tweak-label{font-size:12px;color:#b4ad9b}
+.tweak-select,.tweak-input{appearance:none;background:#0d1117;border:1px solid #2a3140;color:#ece7d8;font:12px 'JetBrains Mono',monospace;height:28px;padding:0 8px;border-radius:6px;outline:none;width:100%}
+.tweak-select:focus,.tweak-input:focus{border-color:#7dd3fc}
+.tweak-seg{display:flex;gap:4px}
+.seg-btn{flex:1;appearance:none;border:1px solid #2a3140;background:transparent;color:#6a6657;font:11px 'JetBrains Mono',monospace;height:26px;border-radius:5px;cursor:pointer;transition:all 120ms}
+.seg-btn:hover{border-color:#b4ad9b;color:#b4ad9b}
+.seg-btn.active{background:#1c2436;border-color:#7dd3fc;color:#7dd3fc}
+.tweak-toggle{display:flex;align-items:center;justify-content:space-between}
+.toggle-btn{position:relative;width:36px;height:20px;border:0;border-radius:999px;background:#2a3140;cursor:pointer;transition:background 150ms;flex-shrink:0}
+.toggle-btn[data-on="1"]{background:#7dd3fc}
+.toggle-btn::after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#ece7d8;transition:transform 150ms;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.toggle-btn[data-on="1"]::after{transform:translateX(16px)}
+/* Animate tab */
+#animate-tab{overflow-y:auto;padding:0 0 16px}
+#animate-tab::-webkit-scrollbar{width:6px}
+#animate-tab::-webkit-scrollbar-thumb{background:#2a3140;border-radius:3px}
+.anim-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 14px 0}
+.anim-card{appearance:none;border:1px solid #2a3140;background:#0d1117;color:#b4ad9b;font:inherit;font-size:12px;height:44px;border-radius:6px;cursor:pointer;text-align:center;transition:all 120ms;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px}
+.anim-card:hover{border-color:#b4ad9b}
+.anim-card.active{border-color:#7dd3fc;color:#7dd3fc;background:#0f1a2a}
+.anim-card .anim-icon{font-size:16px}
+.anim-params{padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+.anim-param-row{display:flex;align-items:center;gap:8px}
+.anim-param-row label{font-size:11px;color:#6a6657;width:60px;flex-shrink:0}
+.anim-param-row input[type=range]{flex:1;accent-color:#7dd3fc}
+.anim-param-row span{font-size:11px;color:#b4ad9b;width:48px;text-align:right;font-family:'JetBrains Mono',monospace}
+.anim-preview-btn{appearance:none;border:1px solid #2a3140;background:#1c2230;color:#b4ad9b;font:inherit;font-size:12px;height:30px;width:100%;border-radius:6px;cursor:pointer;margin:4px 14px 0;width:calc(100% - 28px);transition:all 120ms}
+.anim-preview-btn:hover{border-color:#7dd3fc;color:#7dd3fc}
+.anim-code-block{margin:10px 14px 0;background:#0d1117;border:1px solid #2a3140;border-radius:6px;padding:10px;font:11px/1.6 'JetBrains Mono',monospace;color:#7dd3fc;white-space:pre-wrap;word-break:break-all}
+.anim-code-label{font-size:10px;color:#6a6657;letter-spacing:.06em;text-transform:uppercase;padding:10px 14px 0}
+/* Keyframe animations for slides */
+@keyframes ed-fade-in{from{opacity:0}to{opacity:1}}
+@keyframes ed-slide-up{from{opacity:0;transform:translateY(48px)}to{opacity:1;transform:none}}
+@keyframes ed-slide-left{from{opacity:0;transform:translateX(-80px)}to{opacity:1;transform:none}}
+@keyframes ed-slide-right{from{opacity:0;transform:translateX(80px)}to{opacity:1;transform:none}}
+@keyframes ed-zoom-in{from{opacity:0;transform:scale(0.88)}to{opacity:1;transform:none}}
+@keyframes ed-flip{from{opacity:0;transform:perspective(800px) rotateY(-25deg)}to{opacity:1;transform:perspective(800px) rotateY(0)}}
+.anim-fade-in{animation:ed-fade-in var(--anim-dur,600ms) var(--anim-ease,ease) var(--anim-delay,0ms) both}
+.anim-slide-up{animation:ed-slide-up var(--anim-dur,600ms) var(--anim-ease,ease) var(--anim-delay,0ms) both}
+.anim-slide-left{animation:ed-slide-left var(--anim-dur,600ms) var(--anim-ease,ease) var(--anim-delay,0ms) both}
+.anim-slide-right{animation:ed-slide-right var(--anim-dur,600ms) var(--anim-ease,ease) var(--anim-delay,0ms) both}
+.anim-zoom-in{animation:ed-zoom-in var(--anim-dur,500ms) var(--anim-ease,ease) var(--anim-delay,0ms) both}
+.anim-flip{animation:ed-flip var(--anim-dur,600ms) var(--anim-ease,ease) var(--anim-delay,0ms) both}
+</style>
+</head>
+<body>
+<div id="app">Loading…</div>
+
+<!-- ── deck-stage web component (inline, no XHR needed) ── -->
+<script>
+(()=>{const W=1920,H=1080,HIDE=1800,VA='no_overflowing_text,no_overlapping_text,slide_sized_text';const p2=n=>String(n).padStart(2,'0');const css=`:host{position:fixed;inset:0;display:block;background:#000;overflow:hidden}.stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}.canvas{position:relative;transform-origin:center center;flex-shrink:0;background:#fff;will-change:transform}::slotted(*){position:absolute!important;inset:0!important;width:100%!important;height:100%!important;box-sizing:border-box!important;overflow:hidden;opacity:0;pointer-events:none;visibility:hidden}::slotted([data-deck-active]){opacity:1;pointer-events:auto;visibility:visible}.overlay{position:fixed;left:50%;bottom:22px;transform:translate(-50%,6px) scale(.92);filter:blur(6px);display:flex;align-items:center;gap:4px;padding:4px;background:#000;color:#fff;border-radius:999px;font-size:12px;opacity:0;pointer-events:none;transition:opacity 260ms,transform 260ms,filter 260ms;z-index:2147483000;user-select:none}.overlay[data-visible]{opacity:1;pointer-events:auto;transform:translate(-50%,0) scale(1);filter:blur(0)}.btn{appearance:none;background:transparent;border:0;padding:0 8px;color:rgba(255,255,255,.72);font:inherit;height:28px;border-radius:999px;cursor:default;display:inline-flex;align-items:center}.btn:hover{background:rgba(255,255,255,.12);color:#fff}.count{font-variant-numeric:tabular-nums;color:#fff;font-weight:500;padding:0 8px;min-width:42px;text-align:center;font-size:12px}@media print{:host{position:static;overflow:visible}::slotted(*){position:relative!important;opacity:1!important;visibility:visible!important;break-after:page}.overlay{display:none!important}}`;class DS extends HTMLElement{static get observedAttributes(){return['width','height']}constructor(){super();this._r=this.attachShadow({mode:'open'});this._i=0;this._s=[];this._notes=[];this._ht=null;this._ok=this._ok.bind(this);this._or=this._or.bind(this);this._osc=this._osc.bind(this)}get dw(){return parseInt(this.getAttribute('width'),10)||W}get dh(){return parseInt(this.getAttribute('height'),10)||H}connectedCallback(){this._build();window.addEventListener('keydown',this._ok);window.addEventListener('resize',this._or)}disconnectedCallback(){window.removeEventListener('keydown',this._ok);window.removeEventListener('resize',this._or);if(this._ht)clearTimeout(this._ht)}_build(){const st=document.createElement('style');st.textContent=css;const stage=document.createElement('div');stage.className='stage';const canvas=document.createElement('div');canvas.className='canvas';canvas.style.cssText=`width:${this.dw}px;height:${this.dh}px`;const slot=document.createElement('slot');slot.addEventListener('slotchange',this._osc);canvas.appendChild(slot);stage.appendChild(canvas);const ov=document.createElement('div');ov.className='overlay';ov.innerHTML=`<button class="btn" id="_dp">&#8592;</button><span class="count"><span id="_dc">1</span>/<span id="_dt">1</span></span><button class="btn" id="_dn">&#8594;</button>`;this._r.append(st,stage,ov);this._canvas=canvas;this._slot=slot;this._ov=ov;this._cn=ov.querySelector('#_dc');this._tn=ov.querySelector('#_dt');ov.querySelector('#_dp').onclick=()=>this._go(this._i-1,'click');ov.querySelector('#_dn').onclick=()=>this._go(this._i+1,'click');this._fit()}_osc(){const els=this._slot.assignedElements({flatten:true}).filter(e=>!['TEMPLATE','SCRIPT','STYLE'].includes(e.tagName));this._s=els;els.forEach((el,i)=>{el.setAttribute('data-deck-slide',String(i))});if(this._tn)this._tn.textContent=String(els.length||1);this._apply({show:false,reason:'init'});this._fit()}_apply({show=true,reason='init'}={}){if(!this._s.length)return;const i=this._i;this._s.forEach((s,j)=>{j===i?s.setAttribute('data-deck-active',''):s.removeAttribute('data-deck-active')});if(this._cn)this._cn.textContent=String(i+1);try{history.replaceState(null,'','#'+(i+1))}catch(e){}this.dispatchEvent(new CustomEvent('slidechange',{detail:{index:i,total:this._s.length,reason},bubbles:true,composed:true}));if(show)this._flash()}_flash(){if(!this._ov)return;this._ov.setAttribute('data-visible','');if(this._ht)clearTimeout(this._ht);this._ht=setTimeout(()=>this._ov.removeAttribute('data-visible'),HIDE)}_fit(){if(!this._canvas)return;const s=Math.min(innerWidth/this.dw,innerHeight/this.dh);this._canvas.style.transform=`scale(${s})`}_or(){this._fit()}_ok(e){const t=e.target;if(t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)))return;if(e.metaKey||e.ctrlKey||e.altKey)return;const k=e.key;if(k==='ArrowRight'||k===' '||k==='PageDown')this._go(this._i+1,'keyboard');else if(k==='ArrowLeft'||k==='PageUp')this._go(this._i-1,'keyboard');else if(k==='Home')this._go(0,'keyboard');else if(k==='End')this._go(this._s.length-1,'keyboard');else return;e.preventDefault();this._flash()}_go(i,reason='api'){if(!this._s.length)return;const c=Math.max(0,Math.min(this._s.length-1,i));if(c===this._i){this._flash();return}this._i=c;this._apply({show:true,reason})}get index(){return this._i}get length(){return this._s.length}goTo(i){this._go(i,'api')}next(){this._go(this._i+1,'api')}prev(){this._go(this._i-1,'api')}}if(!customElements.get('deck-stage'))customElements.define('deck-stage',DS)})();
+</script>
+
+<!-- CDN: React 18, ReactDOM 18, Babel standalone -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+
+<!-- ── JSX runtime: tokens → primitives → figures → slides → tweaks ── -->
+<script type="text/babel" id="jsx-tokens" data-presets="env,react">
+const TYPE_SCALE={hero:96,title:64,subtitle:44,body:34,small:28,micro:24,eqn:36};
+const SPACING={paddingTop:100,paddingBottom:80,paddingX:120,titleGap:52,itemGap:28,sectionGap:72};
+const PALETTES={cyan:{name:"Cyan / magenta",bg:"#0b0d12",bgAlt:"#11151c",panel:"#161b24",rule:"#2a3140",ink:"#ece7d8",inkDim:"#b4ad9b",inkFaint:"#6a6657",accent:"#7dd3fc",accent2:"#f472b6",accent3:"#facc15",pos:"#7dd3fc",neg:"#f472b6"},amber:{name:"Amber / teal",bg:"#0c0b09",bgAlt:"#13110d",panel:"#1a1813",rule:"#33302a",ink:"#f1ebda",inkDim:"#b8b09a",inkFaint:"#6e6a5a",accent:"#f5b454",accent2:"#5eead4",accent3:"#fda4af",pos:"#f5b454",neg:"#5eead4"},violet:{name:"Violet / lime",bg:"#0a0b14",bgAlt:"#10111c",panel:"#161826",rule:"#2a2c40",ink:"#ece8e0",inkDim:"#b1adb8",inkFaint:"#6a6878",accent:"#a78bfa",accent2:"#bef264",accent3:"#f9a8d4",pos:"#a78bfa",neg:"#bef264"}};
+const FONT_SERIF=`"EB Garamond","Garamond","Adobe Garamond Pro",Georgia,serif`;
+const FONT_MONO=`"JetBrains Mono","IBM Plex Mono",ui-monospace,monospace`;
+const FONT_SANS=`"Inter Tight",system-ui,-apple-system,sans-serif`;
+Object.assign(window,{TYPE_SCALE,SPACING,PALETTES,FONT_SERIF,FONT_MONO,FONT_SANS});
+</script>
+
+<script type="text/babel" id="jsx-primitives" data-presets="env,react">
+const Frame=({palette,children,padX,padTop,padBottom,bg,label})=><div data-screen-label={label} style={{position:"absolute",inset:0,background:bg||palette.bg,color:palette.ink,fontFamily:FONT_SERIF,paddingTop:padTop??SPACING.paddingTop,paddingBottom:padBottom??SPACING.paddingBottom,paddingLeft:padX??SPACING.paddingX,paddingRight:padX??SPACING.paddingX,display:"flex",flexDirection:"column",boxSizing:"border-box",overflow:"hidden"}}>{children}</div>;
+const Eyebrow=({palette,children,accent})=><div style={{fontFamily:FONT_MONO,fontSize:TYPE_SCALE.micro,letterSpacing:"0.18em",textTransform:"uppercase",color:accent?palette.accent:palette.inkFaint,marginBottom:18}}>{children}</div>;
+const Title=({palette,children,style})=><h1 style={{fontFamily:FONT_SERIF,fontWeight:500,fontSize:TYPE_SCALE.title,lineHeight:1.05,letterSpacing:"-0.01em",color:palette.ink,margin:0,textWrap:"balance",...style}}>{children}</h1>;
+const Subtitle=({palette,children,style})=><h2 style={{fontFamily:FONT_SERIF,fontStyle:"italic",fontWeight:400,fontSize:TYPE_SCALE.subtitle,lineHeight:1.15,color:palette.inkDim,margin:0,textWrap:"balance",...style}}>{children}</h2>;
+const Body=({palette,children,style})=><p style={{fontFamily:FONT_SERIF,fontSize:TYPE_SCALE.body,lineHeight:1.4,color:palette.ink,margin:0,textWrap:"pretty",...style}}>{children}</p>;
+const Small=({palette,children,style})=><p style={{fontFamily:FONT_SERIF,fontSize:TYPE_SCALE.small,lineHeight:1.45,color:palette.inkDim,margin:0,...style}}>{children}</p>;
+const Mono=({palette,children,style})=><span style={{fontFamily:FONT_MONO,fontSize:TYPE_SCALE.micro,letterSpacing:"0.04em",color:palette.inkDim,...style}}>{children}</span>;
+const Rule=({palette,vertical,style})=><div style={{background:palette.rule,...(vertical?{width:1,alignSelf:"stretch"}:{height:1,width:"100%"}),...style}}/>;
+const Footer=({palette,num,total,label})=><div style={{position:"absolute",left:SPACING.paddingX,right:SPACING.paddingX,bottom:36,display:"flex",justifyContent:"space-between",alignItems:"center",fontFamily:FONT_MONO,fontSize:18,letterSpacing:"0.12em",textTransform:"uppercase",color:palette.inkFaint}}><span>Quantum geometry of magnon bands&nbsp;&middot;&nbsp;Y. S. Liu&nbsp;&middot;&nbsp;20 May 2026</span><span>{label}</span><span>{String(num).padStart(2,"0")}/{String(total).padStart(2,"0")}</span></div>;
+const Eq=({tex,display,style,palette})=>{const ref=React.useRef(null);React.useEffect(()=>{if(ref.current&&window.katex){try{ref.current.innerHTML=window.katex.renderToString(tex,{displayMode:!!display,throwOnError:false,output:"html"})}catch(e){ref.current.textContent=tex}}},[tex,display]);return<span ref={ref} style={{color:palette?palette.ink:"inherit",fontSize:display?TYPE_SCALE.eqn:"inherit",...style}}/>};
+const Placeholder=({palette,label,w,h,style,children})=><div style={{width:w,height:h,background:`repeating-linear-gradient(135deg,${palette.panel} 0 14px,${palette.bgAlt} 14px 28px)`,border:`1px solid ${palette.rule}`,borderRadius:2,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:12,color:palette.inkFaint,fontFamily:FONT_MONO,fontSize:TYPE_SCALE.micro,letterSpacing:"0.08em",...style}}>{children||<span>{label}</span>}</div>;
+const Caption=({palette,num,children})=><div style={{fontFamily:FONT_SERIF,fontSize:TYPE_SCALE.small,fontStyle:"italic",color:palette.inkDim,lineHeight:1.4,textWrap:"pretty"}}>{num!=null&&<span style={{fontFamily:FONT_MONO,fontStyle:"normal",color:palette.accent,marginRight:14,letterSpacing:"0.08em",fontSize:TYPE_SCALE.micro}}>FIG.{String(num).padStart(2,"0")}</span>}{children}</div>;
+const NumItem=({palette,n,children,style})=><div style={{display:"flex",gap:28,alignItems:"baseline",...style}}><span style={{fontFamily:FONT_MONO,fontSize:TYPE_SCALE.small,color:palette.accent,letterSpacing:"0.08em",flexShrink:0,minWidth:60}}>{String(n).padStart(2,"0")}</span><div style={{fontFamily:FONT_SERIF,fontSize:TYPE_SCALE.body,lineHeight:1.4,color:palette.ink,textWrap:"pretty"}}>{children}</div></div>;
+Object.assign(window,{Frame,Eyebrow,Title,Subtitle,Body,Small,Mono,Rule,Footer,Eq,Placeholder,Caption,NumItem});
+</script>
+
+<script type="text/babel" id="jsx-figures" data-presets="env,react">
+const HoneycombLattice=({palette,size=420})=>{const a=60,cx=size/2,cy=size/2,sites=[],bonds=[];for(let i=-3;i<=3;i++)for(let j=-3;j<=3;j++){const x0=cx+i*a*1.5,y0=cy+j*a*Math.sqrt(3)+(i%2)*(a*Math.sqrt(3)/2);sites.push({x:x0,y:y0,sub:"A"},{x:x0+a,y:y0,sub:"B"});bonds.push([{x:x0,y:y0},{x:x0+a,y:y0}],[{x:x0+a,y:y0},{x:x0+1.5*a,y:y0+a*Math.sqrt(3)/2}],[{x:x0+a,y:y0},{x:x0+1.5*a,y:y0-a*Math.sqrt(3)/2}])}return<svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}><defs><clipPath id="hc-clip"><circle cx={cx} cy={cy} r={size/2-10}/></clipPath></defs><g clipPath="url(#hc-clip)">{bonds.map((b,i)=><line key={i} x1={b[0].x} y1={b[0].y} x2={b[1].x} y2={b[1].y} stroke={palette.rule} strokeWidth={1.4}/>)}{sites.map((s,i)=><circle key={i} cx={s.x} cy={s.y} r={7} fill={s.sub==="A"?palette.accent:palette.accent2} opacity={0.95}/>)}</g><circle cx={cx} cy={cy} r={size/2-10} fill="none" stroke={palette.rule} strokeWidth={1}/></svg>};
+const MagnonBands=({palette,w=640,h=360,gap=true})=>{const pad=56,iW=w-pad*2,iH=h-pad*2,N=200,pts1=[],pts2=[],D=gap?0.55:0;for(let i=0;i<N;i++){const t=i/(N-1),dK=Math.min(Math.abs(t-1/3),Math.abs(t-1));const eL=1.6+0.9*Math.cos(Math.PI*(t-1/3)*1.6)-0.4*Math.cos(Math.PI*t*2)-0.2;const eH=3.2-0.4*Math.cos(Math.PI*(t-1/3)*2)+0.5*Math.exp(-dK*12)*D;const lK=(t>1/3-0.04&&t<1/3+0.04)?2.4-D/2:eL;const hK=(t>1/3-0.04&&t<1/3+0.04)?2.4+D/2:eH;pts1.push([t,Math.max(0.2,lK)]);pts2.push([t,Math.max(hK,lK+(gap?0.4:0.05))])}const xs=t=>pad+t*iW,ys=e=>pad+iH-(e/4)*iH,path=ps=>ps.map((p,i)=>`${i===0?"M":"L"} ${xs(p[0])} ${ys(p[1])}`).join(" ");const tks=[{t:0,l:"Γ"},{t:1/3,l:"K"},{t:2/3,l:"M"},{t:1,l:"Γ"}];return<svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}><line x1={pad} y1={pad} x2={pad} y2={h-pad} stroke={palette.rule} strokeWidth={1}/><line x1={pad} y1={h-pad} x2={w-pad} y2={h-pad} stroke={palette.rule} strokeWidth={1}/>{tks.map((t,i)=><g key={i}><line x1={xs(t.t)} y1={pad} x2={xs(t.t)} y2={h-pad} stroke={palette.rule} strokeWidth={0.5} strokeDasharray="3 4"/><text x={xs(t.t)} y={h-pad+26} fontFamily={FONT_SERIF} fontSize={20} fontStyle="italic" fill={palette.inkDim} textAnchor="middle">{t.l}</text></g>)}<path d={path(pts1)} fill="none" stroke={palette.accent} strokeWidth={3}/><path d={path(pts2)} fill="none" stroke={palette.accent2} strokeWidth={3}/>{gap&&<g><circle cx={xs(1/3)} cy={ys(2.4)} r={26} fill="none" stroke={palette.accent3} strokeWidth={1.5} strokeDasharray="3 3"/><text x={xs(1/3)+32} y={ys(2.4)-12} fontFamily={FONT_MONO} fontSize={16} fill={palette.accent3}>Δ≠0</text></g>}</svg>};
+const BerryHeatmap=({palette,w=380,h=360,sign=1})=>{const cx=w/2,cy=h/2,r=Math.min(w,h)/2-30,Kpts=[];for(let k=0;k<6;k++){const a=k*Math.PI/3;Kpts.push([cx+r*Math.cos(a),cy+r*Math.sin(a),k%2===0?"K":"K'"])}const dots=[];const step=12;for(let x=-r;x<=r;x+=step)for(let y=-r;y<=r;y+=step){const ax=Math.abs(x),ay=Math.abs(y);if(!(ax<=r*Math.sqrt(3)/2&&ay<=r-ax/Math.sqrt(3)))continue;let omega=0;for(let k=0;k<6;k++){const a=k*Math.PI/3,kx=r*Math.cos(a),ky=r*Math.sin(a),d2=(x-kx)**2+(y-ky)**2;omega+=(k%2===0?1:-1)*Math.exp(-d2/((r*0.35)**2))}omega*=sign;const mag=Math.min(1,Math.abs(omega));dots.push({x:cx+x,y:cy+y,color:omega>=0?palette.pos:palette.neg,alpha:mag*0.85+0.05})}const hex=[];for(let k=0;k<6;k++){const a=k*Math.PI/3;hex.push([cx+r*Math.cos(a),cy+r*Math.sin(a)])}return<svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>{dots.map((d,i)=><circle key={i} cx={d.x} cy={d.y} r={5} fill={d.color} opacity={d.alpha}/>)}<polygon points={hex.map(p=>p.join(",")).join(" ")} fill="none" stroke={palette.rule} strokeWidth={1.4}/>{Kpts.map((k,i)=><g key={i}><circle cx={k[0]} cy={k[1]} r={4} fill={palette.ink}/><text x={k[0]+(k[0]>cx?10:-22)} y={k[1]+(k[1]>cy?16:-8)} fontFamily={FONT_SERIF} fontStyle="italic" fontSize={16} fill={palette.ink}>{k[2]}</text></g>)}<text x={cx} y={cy-4} fontFamily={FONT_SERIF} fontStyle="italic" fontSize={16} fill={palette.inkDim} textAnchor="middle">Γ</text><circle cx={cx} cy={cy} r={3} fill={palette.ink}/></svg>};
+const PolDiagram=({palette,w=360,h=240,channel="xx"})=>{const cx=w/2,cy=h/2,angles={xx:[0,0],xy:[0,90],"R+L-":[45,-45],"R-R+":[45,45]}[channel]||[0,0];return<svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}><circle cx={cx} cy={cy} r={70} fill="none" stroke={palette.rule} strokeWidth={1}/><line x1={cx-110} y1={cy} x2={cx-80} y2={cy} stroke={palette.accent} strokeWidth={2}/><line x1={cx-80} y1={cy} x2={cx-80+30*Math.cos(angles[0]*Math.PI/180)} y2={cy-30*Math.sin(angles[0]*Math.PI/180)} stroke={palette.accent} strokeWidth={3}/><line x1={cx-80} y1={cy} x2={cx-80-30*Math.cos(angles[0]*Math.PI/180)} y2={cy+30*Math.sin(angles[0]*Math.PI/180)} stroke={palette.accent} strokeWidth={3}/><line x1={cx+80} y1={cy} x2={cx+110} y2={cy} stroke={palette.accent2} strokeWidth={2}/><line x1={cx+80} y1={cy} x2={cx+80+30*Math.cos(angles[1]*Math.PI/180)} y2={cy-30*Math.sin(angles[1]*Math.PI/180)} stroke={palette.accent2} strokeWidth={3}/><line x1={cx+80} y1={cy} x2={cx+80-30*Math.cos(angles[1]*Math.PI/180)} y2={cy+30*Math.sin(angles[1]*Math.PI/180)} stroke={palette.accent2} strokeWidth={3}/><rect x={cx-16} y={cy-16} width={32} height={32} fill={palette.panel} stroke={palette.rule}/><text x={cx} y={h-14} textAnchor="middle" fontFamily={FONT_MONO} fontSize={16} fill={palette.inkDim} letterSpacing="0.12em">{channel.toUpperCase()}</text></svg>};
+const RamanLineshape=({palette,w=640,h=320,twoBumps=false,channel="xx"})=>{const pad=50,N=240,iW=w-pad*2,iH=h-pad*2,pts=[];for(let i=0;i<N;i++){const x=i/(N-1);let y=0.05+0.04*Math.exp(-(((x-0.05)/0.04)**2))+0.55*Math.exp(-(((x-0.55)/0.18)**2));if(twoBumps)y+=0.35*Math.exp(-(((x-0.78)/0.06)**2));y+=0.012*Math.sin(i*0.7)*Math.cos(i*0.21);pts.push([x,y])}const xs=t=>pad+t*iW,ys=e=>pad+iH-e/1.05*iH,d=pts.map((p,i)=>`${i===0?"M":"L"} ${xs(p[0]).toFixed(1)} ${ys(p[1]).toFixed(1)}`).join(" "),fd=`${d} L ${xs(1)} ${ys(0)} L ${xs(0)} ${ys(0)} Z`;return<svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}><line x1={pad} y1={pad} x2={pad} y2={h-pad} stroke={palette.rule} strokeWidth={1}/><line x1={pad} y1={h-pad} x2={w-pad} y2={h-pad} stroke={palette.rule} strokeWidth={1}/><path d={fd} fill={channel==="xy"?palette.accent2:palette.accent} opacity={0.16}/><path d={d} fill="none" stroke={channel==="xy"?palette.accent2:palette.accent} strokeWidth={2.5}/><text x={w-pad} y={h-pad+28} fontFamily={FONT_SERIF} fontStyle="italic" fontSize={20} fill={palette.inkDim} textAnchor="end">Raman shift ω</text><text x={pad-18} y={pad+14} fontFamily={FONT_SERIF} fontStyle="italic" fontSize={20} fill={palette.inkDim} textAnchor="end">I(ω)</text></svg>};
+const DMPlaquette=({palette,w=360,h=280})=><svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}><polygon points={Array.from({length:6}).map((_,i)=>{const a=i*Math.PI/3-Math.PI/6;return`${w/2+90*Math.cos(a)},${h/2+90*Math.sin(a)}`}).join(" ")} fill="none" stroke={palette.rule} strokeWidth={1.4}/>{Array.from({length:6}).map((_,i)=>{const a=i*Math.PI/3-Math.PI/6;return<circle key={i} cx={w/2+90*Math.cos(a)} cy={h/2+90*Math.sin(a)} r={8} fill={i%2===0?palette.accent:palette.accent2}/>})}{Array.from({length:3}).map((_,i)=>{const a1=i*2*Math.PI/3-Math.PI/6,a2=a1+Math.PI/3;const x1=w/2+90*Math.cos(a1),y1=h/2+90*Math.sin(a1),x2=w/2+90*Math.cos(a2+Math.PI/3),y2=h/2+90*Math.sin(a2+Math.PI/3);return<path key={i} d={`M ${x1} ${y1} Q ${w/2} ${h/2} ${x2} ${y2}`} fill="none" stroke={palette.accent3} strokeWidth={2} strokeDasharray="4 4"/>})}<text x={w/2} y={h/2+6} textAnchor="middle" fontFamily={FONT_SERIF} fontStyle="italic" fontSize={22} fill={palette.accent3}>D_ij</text><defs><marker id="dm" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill={palette.accent3}/></marker></defs></svg>;
+const EdgeMode=({palette,w=480,h=320})=>{const pad=40;return<svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}><rect x={pad} y={pad} width={w-pad*2} height={h-pad*2} fill={palette.panel} stroke={palette.rule}/><rect x={pad} y={pad+60} width={w-pad*2} height={h-pad*2-120} fill={palette.bgAlt}/><text x={pad+14} y={pad+36} fontFamily={FONT_SERIF} fontStyle="italic" fontSize={18} fill={palette.inkDim}>upper band</text><text x={pad+14} y={h-pad-20} fontFamily={FONT_SERIF} fontStyle="italic" fontSize={18} fill={palette.inkDim}>lower band</text><text x={w/2} y={h/2+6} textAnchor="middle" fontFamily={FONT_SERIF} fontStyle="italic" fontSize={20} fill={palette.inkFaint}>gap</text><path d={`M ${pad} ${h-pad-60} Q ${w/2} ${pad+80}, ${w-pad} ${pad+60}`} fill="none" stroke={palette.accent} strokeWidth={3}/><text x={w-pad-8} y={pad+56} textAnchor="end" fontFamily={FONT_MONO} fontSize={16} fill={palette.accent}>edge mode</text></svg>};
+const WavyLine=({x1,y1,x2,y2,color})=>{const dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy),N=Math.max(8,Math.round(L/14)),nx=-dy/L,ny=dx/L;let d=`M ${x1} ${y1}`;for(let i=1;i<=N;i++){const t=i/N,cx2=x1+dx*(t-1/(2*N)),cy2=y1+dy*(t-1/(2*N)),sign=i%2===0?1:-1;d+=` Q ${cx2+sign*nx*6} ${cy2+sign*ny*6} ${x1+dx*t} ${y1+dy*t}`}return<path d={d} fill="none" stroke={color} strokeWidth={2}/>};
+const VertexDiagram=({palette,w=520,h=260})=><svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}><WavyLine x1={40} y1={40} x2={w/2-40} y2={h/2} color={palette.accent}/><WavyLine x1={w/2+40} y1={h/2} x2={w-40} y2={40} color={palette.accent2}/><line x1={w/2} y1={h/2} x2={w-40} y2={h-40} stroke={palette.ink} strokeWidth={2}/><line x1={w/2} y1={h/2} x2={40} y2={h-40} stroke={palette.ink} strokeWidth={2}/><circle cx={w/2} cy={h/2} r={12} fill={palette.accent3}/><text x={w/2+18} y={h/2+6} fontFamily={FONT_SERIF} fontStyle="italic" fontSize={20} fill={palette.accent3}>R̂</text><text x={50} y={36} fontFamily={FONT_MONO} fontSize={14} fill={palette.accent}>ε_i, ω_i</text><text x={w-110} y={36} fontFamily={FONT_MONO} fontSize={14} fill={palette.accent2}>ε_s, ω_s</text></svg>;
+const FSDiagram=({palette})=><svg width={520} height={420} viewBox="0 0 520 420"><defs><radialGradient id="fsg" cx="50%" cy="50%" r="60%"><stop offset="0%" stopColor={palette.accent} stopOpacity="0.25"/><stop offset="100%" stopColor={palette.accent} stopOpacity="0"/></radialGradient></defs><circle cx="260" cy="210" r="180" fill="url(#fsg)" stroke={palette.rule}/><ellipse cx="260" cy="210" rx="180" ry="58" fill="none" stroke={palette.rule} strokeDasharray="4 5"/><ellipse cx="260" cy="210" rx="58" ry="180" fill="none" stroke={palette.rule} strokeDasharray="4 5"/>{[0,60,130,220,310].map((a,i)=>{const x=260+180*Math.cos(a*Math.PI/180),y=210-180*Math.sin(a*Math.PI/180);return<g key={i}><line x1="260" y1="210" x2={x} y2={y} stroke={palette.inkDim} strokeWidth="1.5"/><circle cx={x} cy={y} r="6" fill={palette.accent}/></g>})}<text x="260" y="218" textAnchor="middle" fontFamily={FONT_SERIF} fontStyle="italic" fontSize="22" fill={palette.ink}>|u(k)⟩</text><text x="320" y="120" fontFamily={FONT_SERIF} fontStyle="italic" fontSize="20" fill={palette.accent2}>g_µν</text><text x="160" y="320" fontFamily={FONT_SERIF} fontStyle="italic" fontSize="20" fill={palette.accent}>Ω_µν</text></svg>;
+Object.assign(window,{HoneycombLattice,MagnonBands,BerryHeatmap,PolDiagram,RamanLineshape,DMPlaquette,EdgeMode,VertexDiagram,FSDiagram,WavyLine});
+</script>
+
+<script type="text/babel" id="jsx-slides" data-presets="env,react">
+const S={};
+S.section=({palette,num,total,label,kicker,title,subtitle})=><Frame palette={palette} bg={palette.bgAlt} label={label}><div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center"}}><div style={{fontFamily:FONT_MONO,fontSize:TYPE_SCALE.small,letterSpacing:"0.24em",textTransform:"uppercase",color:palette.accent,marginBottom:40}}>{kicker}</div><Title palette={palette} style={{fontSize:TYPE_SCALE.hero,fontWeight:500,lineHeight:1.02}}>{title}</Title>{subtitle&&<Subtitle palette={palette} style={{marginTop:36,maxWidth:1300}}>{subtitle}</Subtitle>}</div><Footer palette={palette} num={num} total={total} label={label}/></Frame>;
+S.cover=({palette,num,total})=><Frame palette={palette} bg={palette.bg} label="01 Cover" padTop={120} padBottom={120}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}><div style={{fontFamily:FONT_MONO,fontSize:TYPE_SCALE.micro,letterSpacing:"0.18em",textTransform:"uppercase",color:palette.inkFaint}}>Group seminar&nbsp;&middot;&nbsp;20 May 2026</div><div style={{fontFamily:FONT_MONO,fontSize:TYPE_SCALE.micro,letterSpacing:"0.18em",textTransform:"uppercase",color:palette.inkFaint}}>Vol. I&nbsp;&middot;&nbsp;No. 01</div></div><div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",maxWidth:1500}}><Eyebrow palette={palette} accent>Theory talk</Eyebrow><h1 style={{fontFamily:FONT_SERIF,fontWeight:500,fontSize:124,lineHeight:0.98,letterSpacing:"-0.015em",color:palette.ink,margin:0,textWrap:"balance"}}>Quantum geometry of magnon bands<br/><span style={{fontStyle:"italic",color:palette.accent}}>and Raman scattering</span></h1><div style={{marginTop:56,display:"flex",gap:56,alignItems:"baseline"}}><Body palette={palette} style={{fontSize:TYPE_SCALE.subtitle,fontStyle:"italic",color:palette.inkDim}}>Probing Berry curvature with light in monolayer CrI&#8323;</Body></div></div><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end"}}><div><Body palette={palette} style={{fontSize:TYPE_SCALE.body,color:palette.ink}}>Ying Shing Liu</Body><Small palette={palette} style={{marginTop:8}}>Theory of magnetic excitations</Small></div><div style={{textAlign:"right"}}><Mono palette={palette}>I. spin-wave geometry&nbsp;&#8594;&nbsp;II. light&#8211;matter vertex&nbsp;&#8594;&nbsp;III. selection rules</Mono></div></div></Frame>;
+S.motivation=({palette,num,total})=><Frame palette={palette} label="02 Motivation"><Eyebrow palette={palette}>&#167; 02&nbsp;&middot;&nbsp;Motivation</Eyebrow><Title palette={palette}>Why look for quantum geometry in magnons?</Title><div style={{marginTop:SPACING.titleGap,display:"grid",gridTemplateColumns:"1.2fr 1fr",gap:80,flex:1}}><div style={{display:"flex",flexDirection:"column",gap:SPACING.itemGap}}><NumItem palette={palette} n={1}>Electrons in topological bands carry <i>Berry curvature</i> and a <i>quantum metric</i>; magnons should too.</NumItem><NumItem palette={palette} n={2}>Thermal Hall and INS confirm the bands&#8201;&#8212;&#8201;but couple weakly to band <i>geometry</i>.</NumItem><NumItem palette={palette} n={3}>Photons couple directly to spin pairs through the <i>Fleury&#8211;Loudon</i> vertex.</NumItem><NumItem palette={palette} n={4}><span style={{color:palette.accent}}>Claim:</span> polarized two-magnon Raman is a <i>local</i> probe of magnon Berry curvature and quantum metric.</NumItem></div><div style={{display:"flex",flexDirection:"column",justifyContent:"center",gap:24}}><BerryHeatmap palette={palette} w={460} h={420}/><Caption palette={palette} num={1}>Sketched Berry curvature &#937;(k) of the upper magnon band over the hexagonal BZ &#8212; sign-alternating between K and K&#8242; valleys.</Caption></div></div><Footer palette={palette} num={num} total={total} label="Motivation"/></Frame>;
+S.outline=({palette,num,total})=><Frame palette={palette} label="03 Outline"><Eyebrow palette={palette}>&#167; 03&nbsp;&middot;&nbsp;Outline</Eyebrow><Title palette={palette}>Three movements</Title><div style={{marginTop:80,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:56,flex:1}}>{[{n:"I",t:"Quantum geometry of magnon bands",body:"Linear spin-wave theory, Bogoliubov pseudo-unitarity, Berry curvature, quantum metric, Chern numbers."},{n:"II",t:"Light&#8211;matter coupling for magnons",body:"Fleury&#8211;Loudon vertex, two-magnon continuum, polarization channels, geometric form of the Raman response."},{n:"III",t:"Probing geometry in CrI&#8323;",body:"Predictions for monolayer CrI&#8323;: polarization-resolved spectra, topological vs trivial diagnostics, comparison with Hall and INS."}].map((s,i)=><div key={i} style={{display:"flex",flexDirection:"column",gap:24,paddingTop:24,borderTop:`1px solid ${palette.rule}`}}><div style={{fontFamily:FONT_SERIF,fontStyle:"italic",fontSize:96,lineHeight:1,color:palette.accent}}>{s.n}</div><Subtitle palette={palette} style={{fontStyle:"normal",fontSize:38,color:palette.ink}}>{s.t}</Subtitle><Small palette={palette}>{s.body}</Small></div>)}</div><Footer palette={palette} num={num} total={total} label="Outline"/></Frame>;
+S.partI=({palette,num,total})=>S.section({palette,num,total,label:"04 Part I",kicker:"Part I",title:<>Quantum geometry of <span style={{fontStyle:"italic",color:palette.accent}}>magnon bands</span></>,subtitle:"From Holstein&#8211;Primakoff bosons to Berry curvature, quantum metric, and Chern numbers."});
+S.lswt=({palette,num,total,eqOn})=><Frame palette={palette} label="05 LSWT"><Eyebrow palette={palette}>&#167; 05&nbsp;&middot;&nbsp;Linear spin-wave theory</Eyebrow><Title palette={palette}>Magnons in linear spin-wave theory</Title><div style={{marginTop:SPACING.titleGap,display:"grid",gridTemplateColumns:"1.05fr 1fr",gap:80,flex:1}}><div style={{display:"flex",flexDirection:"column",gap:32}}><Body palette={palette}>Holstein&#8211;Primakoff bosons expand <i>S&#8314;</i>, <i>S&#8315;</i>, <i>S&#7515;</i> around the ordered moment. Quadratic terms give a Bogoliubov&#8211;de Gennes Hamiltonian.</Body>{eqOn&&<div style={{background:palette.panel,border:`1px solid ${palette.rule}`,padding:"32px 40px"}}><Eq display tex={String.raw`H_{\mathrm{LSW}} = \tfrac{1}{2}\sum_{\mathbf{k}} \Psi^\dagger_{\mathbf{k}}\, \mathcal{H}(\mathbf{k})\, \Psi_{\mathbf{k}}`} palette={palette}/></div>}<Body palette={palette}>Diagonalisation requires a <i>paraunitary</i> transformation <Eq tex="T_{\mathbf{k}}" palette={palette}/> with <Eq tex="T^\dagger \sigma_3 T = \sigma_3" palette={palette}/>; eigenmodes are the magnon Bloch states.</Body></div><div style={{display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",gap:20}}><HoneycombLattice palette={palette} size={460}/><Caption palette={palette} num={2}>Honeycomb ferromagnet: two sublattices A/B with aligned classical ground state.</Caption></div></div><Footer palette={palette} num={num} total={total} label="LSWT"/></Frame>;
+S.berry=({palette,num,total,eqOn})=><Frame palette={palette} label="06 Berry curvature"><Eyebrow palette={palette}>&#167; 06&nbsp;&middot;&nbsp;Berry curvature</Eyebrow><Title palette={palette}>Berry curvature of magnon bands</Title><div style={{marginTop:SPACING.titleGap,display:"grid",gridTemplateColumns:"1fr 1fr",gap:72,flex:1}}><div style={{display:"flex",flexDirection:"column",gap:28}}><Body palette={palette}>Define the Berry connection on the magnon Bloch bundle with the paraunitary inner product:</Body>{eqOn&&<div style={{background:palette.panel,border:`1px solid ${palette.rule}`,padding:"28px 36px",display:"flex",flexDirection:"column",gap:18}}><Eq display tex={String.raw`\mathcal{A}^n_\mu = i\langle\!\langle u_n|\partial_{k_\mu}|u_n\rangle\!\rangle`} palette={palette}/><Eq display tex={String.raw`\Omega^n_{\mu\nu} = \partial_{k_\mu}\mathcal{A}^n_\nu - \partial_{k_\nu}\mathcal{A}^n_\mu`} palette={palette}/></div>}<Body palette={palette}>For a 2D ferromagnet, only <Eq tex="\Omega_{xy}^n" palette={palette}/> survives. Time-reversal is broken by the magnetic order.</Body></div><div style={{display:"flex",flexDirection:"column",gap:20,justifyContent:"center"}}><BerryHeatmap palette={palette} w={500} h={460}/><Caption palette={palette} num={3}>&#937;(k) of the upper band concentrates on K and K&#8242;; signs alternate.</Caption></div></div><Footer palette={palette} num={num} total={total} label="Berry curvature"/></Frame>;
+S.metric=({palette,num,total,eqOn})=><Frame palette={palette} label="07 Quantum metric"><Eyebrow palette={palette}>&#167; 07&nbsp;&middot;&nbsp;Quantum metric</Eyebrow><Title palette={palette}>Quantum metric and Fubini&#8211;Study form</Title><div style={{marginTop:SPACING.titleGap,display:"grid",gridTemplateColumns:"1fr 1fr",gap:72,flex:1}}><div style={{display:"flex",flexDirection:"column",gap:28}}><Body palette={palette}>The full Fubini&#8211;Study tensor on the projective Bloch bundle splits into metric and curvature:</Body>{eqOn&&<div style={{background:palette.panel,border:`1px solid ${palette.rule}`,padding:"28px 36px",display:"flex",flexDirection:"column",gap:18}}><Eq display tex={String.raw`Q^n_{\mu\nu} = g^n_{\mu\nu} - \tfrac{i}{2}\,\Omega^n_{\mu\nu}`} palette={palette}/></div>}<Body palette={palette}>The metric <Eq tex="g^n_{\mu\nu}" palette={palette}/> measures the <i>distance</i> between Bloch states; the curvature <Eq tex="\Omega^n_{\mu\nu}" palette={palette}/> their <i>twist</i>.</Body><Small palette={palette}>Inequality <Eq tex="\det g \ge \tfrac{1}{4}|\Omega|^2" palette={palette}/> bounds metric by curvature.</Small></div><div style={{display:"flex",alignItems:"center",justifyContent:"center"}}><FSDiagram palette={palette}/></div></div><Footer palette={palette} num={num} total={total} label="Quantum metric"/></Frame>;
+S.topology=({palette,num,total,eqOn})=><Frame palette={palette} label="08 Topology"><Eyebrow palette={palette}>&#167; 08&nbsp;&middot;&nbsp;Topology</Eyebrow><Title palette={palette}>Magnon Chern numbers and edge modes</Title><div style={{marginTop:SPACING.titleGap,display:"grid",gridTemplateColumns:"1fr 1fr",gap:72,flex:1}}><div style={{display:"flex",flexDirection:"column",gap:28}}><Body palette={palette}>Integrate the Berry curvature over the BZ:</Body>{eqOn&&<div style={{background:palette.panel,border:`1px solid ${palette.rule}`,padding:"28px 36px"}}><Eq display tex={String.raw`C_n = \frac{1}{2\pi}\int_{\mathrm{BZ}} d^2k\;\Omega^n_{xy} \in \mathbb{Z}`} palette={palette}/></div>}<Body palette={palette}>Non-zero <Eq tex="C_n" palette={palette}/> implies chiral magnon edge modes and thermal Hall conductivity.</Body><div style={{display:"flex",gap:16,alignItems:"center"}}><div style={{width:16,height:16,background:palette.accent}}/><Mono palette={palette} style={{fontSize:TYPE_SCALE.small}}>C&#8314; = +1 (upper band)</Mono></div><div style={{display:"flex",gap:16,alignItems:"center"}}><div style={{width:16,height:16,background:palette.accent2}}/><Mono palette={palette} style={{fontSize:TYPE_SCALE.small}}>C&#8315; = &#8722;1 (lower band)</Mono></div></div><div style={{display:"flex",flexDirection:"column",gap:16,justifyContent:"center"}}><EdgeMode palette={palette} w={520} h={360}/><Caption palette={palette} num={4}>Slab geometry: gapped bulk with a chiral magnon edge mode crossing the gap.</Caption></div></div><Footer palette={palette} num={num} total={total} label="Topology"/></Frame>;
+S.cri3=({palette,num,total})=><Frame palette={palette} label="09 CrI3 platform"><Eyebrow palette={palette}>&#167; 09&nbsp;&middot;&nbsp;Material</Eyebrow><Title palette={palette}>Monolayer CrI&#8323; as a model platform</Title><div style={{marginTop:SPACING.titleGap,display:"grid",gridTemplateColumns:"1.1fr 1fr",gap:72,flex:1}}><div style={{display:"flex",flexDirection:"column",gap:28}}><Body palette={palette}>2D honeycomb ferromagnet of Cr&#179;&#8314; (S = 3/2). Easy-axis anisotropy out of plane; Curie point &#8776; 45 K in monolayer.</Body><div style={{background:palette.panel,border:`1px solid ${palette.rule}`,padding:"24px 32px"}}><Eq display tex={String.raw`H = -J\!\sum_{\langle ij\rangle}\!\mathbf{S}_i\!\cdot\!\mathbf{S}_j + \sum_{\langle\!\langle ij\rangle\!\rangle}\!\mathbf{D}_{ij}\!\cdot\!(\mathbf{S}_i\!\times\!\mathbf{S}_j) - A\!\sum_i\!(S^z_i)^2`} palette={palette}/></div><Small palette={palette}>Next-nearest-neighbour DM term is the Haldane mass: it gaps the Dirac magnon at K and gives C&#8314;&#8725;&#8315; = &#177;1.</Small></div><div style={{display:"flex",flexDirection:"column",gap:24,justifyContent:"center",alignItems:"center"}}><DMPlaquette palette={palette} w={420} h={320}/><Caption palette={palette} num={5}>Next-nearest-neighbour DM vectors on the honeycomb plaquette.</Caption></div></div><Footer palette={palette} num={num} total={total} label="CrI&#8323;"/></Frame>;
+S.cri3bands=({palette,num,total,figVariant})=><Frame palette={palette} label="10 CrI3 bands"><Eyebrow palette={palette}>&#167; 10&nbsp;&middot;&nbsp;Bands</Eyebrow><Title palette={palette}>Magnon bands of monolayer CrI&#8323;</Title><div style={{marginTop:SPACING.titleGap,display:"grid",gridTemplateColumns:"1.1fr 1fr",gap:64,flex:1}}><div style={{display:"flex",flexDirection:"column",gap:24,justifyContent:"center"}}><MagnonBands palette={palette} w={760} h={460} gap={figVariant!=="nogap"}/><Caption palette={palette} num={6}>Acoustic and optical magnon bands along &#915;&#8211;K&#8211;M&#8211;&#915;. DM opens a gap at K.</Caption></div><div style={{display:"flex",flexDirection:"column",gap:24,justifyContent:"center"}}><Body palette={palette}>Two bands from two sublattices. INS reports band max &#8776; 19 meV; gap at K, &#916; &#8776; 2 meV.</Body><div style={{display:"flex",flexDirection:"column",gap:16,padding:"24px 28px",background:palette.panel,border:`1px solid ${palette.rule}`}}><div style={{display:"flex",justifyContent:"space-between"}}><Mono palette={palette}>J</Mono><Body palette={palette} style={{fontSize:TYPE_SCALE.small}}>2.13 meV</Body></div><div style={{display:"flex",justifyContent:"space-between"}}><Mono palette={palette}>D</Mono><Body palette={palette} style={{fontSize:TYPE_SCALE.small}}>0.31 meV</Body></div><div style={{display:"flex",justifyContent:"space-between"}}><Mono palette={palette}>A</Mono><Body palette={palette} style={{fontSize:TYPE_SCALE.small}}>0.22 meV</Body></div><div style={{display:"flex",justifyContent:"space-between"}}><Mono palette={palette}>&#916;_K</Mono><Body palette={palette} style={{fontSize:TYPE_SCALE.small,color:palette.accent3}}>&#8776; 2 meV</Body></div></div></div></div><Footer palette={palette} num={num} total={total} label="CrI&#8323; bands"/></Frame>;
+S.cri3berry=({palette,num,total})=><Frame palette={palette} label="11 CrI3 Berry"><Eyebrow palette={palette}>&#167; 11&nbsp;&middot;&nbsp;Curvature</Eyebrow><Title palette={palette}>Berry curvature distribution in CrI&#8323;</Title><div style={{marginTop:SPACING.titleGap,display:"grid",gridTemplateColumns:"1fr 1fr",gap:64,flex:1}}><div style={{display:"flex",flexDirection:"column",gap:28,justifyContent:"center"}}><Body palette={palette}>Curvature concentrates near K, K&#8242; with opposite signs. The integral over the BZ gives <Eq tex="C_+ = +1" palette={palette}/>.</Body><Body palette={palette}>The quantum metric peaks at the same valleys&#8201;&#8212;&#8201;locked together by the Fubini&#8211;Study inequality.</Body></div><div style={{display:"flex",flexDirection:"row",gap:24,alignItems:"center",justifyContent:"center"}}><div style={{display:"flex",flexDirection:"column",gap:8,alignItems:"center"}}><BerryHeatmap palette={palette} w={300} h={300} sign={1}/><Mono palette={palette}>&#937;&#8314;(k)</Mono></div><div style={{display:"flex",flexDirection:"column",gap:8,alignItems:"center"}}><BerryHeatmap palette={palette} w={300} h={300} sign={-1}/><Mono palette={palette}>&#937;&#8315;(k)</Mono></div></div></div><Footer palette={palette} num={num} total={total} label="CrI&#8323; curvature"/></Frame>;
+S.partII=({palette,num,total})=>S.section({palette,num,total,label:"12 Part II",kicker:"Part II",title:<>Light&#8211;matter coupling <span style={{fontStyle:"italic",color:palette.accent}}>for magnons</span></>,subtitle:"How photons couple to two-magnon excitations: the Fleury&#8211;Loudon vertex and its geometric content."});
+S.fleury=({palette,num,total,eqOn})=><Frame palette={palette} label="13 Fleury-Loudon"><Eyebrow palette={palette}>&#167; 13&nbsp;&middot;&nbsp;Fleury&#8211;Loudon</Eyebrow><Title palette={palette}>The Fleury&#8211;Loudon Raman vertex</Title><div style={{marginTop:SPACING.titleGap,display:"grid",gridTemplateColumns:"1.1fr 1fr",gap:72,flex:1}}><div style={{display:"flex",flexDirection:"column",gap:28}}><Body palette={palette}>Off-resonant exchange-light coupling: photons modulate <Eq tex="J_{ij}" palette={palette}/> via virtual hopping. The effective Raman operator is bilinear in spins and quadratic in polarisation.</Body>{eqOn&&<div style={{background:palette.panel,border:`1px solid ${palette.rule}`,padding:"28px 36px"}}><Eq display tex={String.raw`\hat{\mathcal{R}} = \sum_{ij}(\boldsymbol{\varepsilon}_i\!\cdot\!\hat{\mathbf{d}}_{ij})(\boldsymbol{\varepsilon}_s^*\!\cdot\!\hat{\mathbf{d}}_{ij})\;\mathbf{S}_i\!\cdot\!\mathbf{S}_j`} palette={palette}/></div>}</div><div style={{display:"flex",flexDirection:"column",gap:16,justifyContent:"center",alignItems:"center"}}><VertexDiagram palette={palette} w={580} h={300}/><Caption palette={palette} num={7}>Off-resonant vertex coupling photons to a magnon pair via the exchange-modulated bond.</Caption></div></div><Footer palette={palette} num={num} total={total} label="Fleury&#8211;Loudon"/></Frame>;
+S.twomag=({palette,num,total,eqOn})=><Frame palette={palette} label="14 Two-magnon"><Eyebrow palette={palette}>&#167; 14&nbsp;&middot;&nbsp;Two-magnon continuum</Eyebrow><Title palette={palette}>Two-magnon Raman continuum</Title><div style={{marginTop:SPACING.titleGap,display:"grid",gridTemplateColumns:"1fr 1fr",gap:72,flex:1}}><div style={{display:"flex",flexDirection:"column",gap:28}}><Body palette={palette}>Acting on the FM ground state, <Eq tex="\hat{\mathcal{R}}" palette={palette}/> creates a magnon pair with total momentum zero:</Body>{eqOn&&<div style={{background:palette.panel,border:`1px solid ${palette.rule}`,padding:"28px 36px"}}><Eq display tex={String.raw`I(\omega) \propto \sum_{nm}\!\int\!\frac{d^2k}{(2\pi)^2}\,|M_{nm}|^2\,\delta\!\big(\omega - \omega_n - \omega_m\big)`} palette={palette}/></div>}<Body palette={palette}>The matrix element <Eq tex="M_{nm}(\mathbf{k})" palette={palette}/> carries the band geometry.</Body></div><div style={{display:"flex",flexDirection:"column",justifyContent:"center",gap:16}}><RamanLineshape palette={palette} w={680} h={360}/><Caption palette={palette} num={8}>Schematic two-magnon spectrum: broad continuum from k-summed pair density.</Caption></div></div><Footer palette={palette} num={num} total={total} label="Two-magnon"/></Frame>;
+S.polarization=({palette,num,total})=><Frame palette={palette} label="15 Polarization"><Eyebrow palette={palette}>&#167; 15&nbsp;&middot;&nbsp;Channels</Eyebrow><Title palette={palette}>Polarization channels and selection rules</Title><div style={{marginTop:SPACING.titleGap,display:"flex",flexDirection:"column",gap:32,flex:1}}><Body palette={palette} style={{maxWidth:1500}}>Decompose <Eq tex="\hat{\mathcal{R}}" palette={palette}/> into irreducible representations of <i>D&#8323;d</i>. Linear and circular channels project onto different combinations of <Eq tex="g_{\mu\nu}" palette={palette}/> and <Eq tex="\Omega_{\mu\nu}" palette={palette}/>.</Body><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:32,flex:1}}>{[{ch:"xx",irrep:"A₁g ⊕ Eg",probes:"gₓₓ + gᵧᵧ"},{ch:"xy",irrep:"Eg",probes:"gₓᵧ, Ωₓᵧ (inter-band)"},{ch:"R+L-",irrep:"Eg",probes:"Ωₓᵧ (sign-resolved)"},{ch:"R+R+",irrep:"A₂g",probes:"antisymmetric: pure Ωₓᵧ"}].map((c,i)=><div key={i} style={{border:`1px solid ${palette.rule}`,padding:"28px 24px",display:"flex",flexDirection:"column",gap:16,background:palette.panel}}><PolDiagram palette={palette} w={300} h={180} channel={c.ch}/><Mono palette={palette} style={{fontSize:TYPE_SCALE.small,color:palette.accent}}>{c.ch}</Mono><Small palette={palette} style={{fontSize:TYPE_SCALE.small}}><i>{c.irrep}</i></Small><Small palette={palette} style={{color:palette.inkFaint}}>{c.probes}</Small></div>)}</div></div><Footer palette={palette} num={num} total={total} label="Polarization"/></Frame>;
+S.formalism=({palette,num,total,eqOn})=><Frame palette={palette} label="16 Formalism"><Eyebrow palette={palette}>&#167; 16&nbsp;&middot;&nbsp;Formalism</Eyebrow><Title palette={palette}>Light&#8211;matter coupling formalism for magnons</Title><div style={{marginTop:SPACING.titleGap,display:"grid",gridTemplateColumns:"1fr 1fr",gap:56,flex:1,minHeight:0}}><div style={{display:"flex",flexDirection:"column",gap:22,minWidth:0}}><Body palette={palette} style={{fontSize:TYPE_SCALE.small}}>Combine paraunitary diagonalisation with the Fleury&#8211;Loudon vertex:</Body>{eqOn&&<div style={{background:palette.panel,border:`1px solid ${palette.rule}`,padding:"22px 28px",display:"flex",flexDirection:"column",gap:14,overflow:"hidden"}}><Eq display tex={String.raw`M_{nm}(\mathbf{k}) = \sum_{\delta}\Pi_{\boldsymbol{\varepsilon}}(\boldsymbol{\delta})\,\langle u_n|V(\boldsymbol{\delta})|u_m\rangle`} palette={palette}/></div>}<Body palette={palette} style={{fontSize:TYPE_SCALE.small}}>For circular polarisation, the bond sum picks up phases reproducing a Berry-connection-like object on the magnon bundle.</Body></div><div style={{display:"flex",flexDirection:"column",gap:24,justifyContent:"center",minWidth:0}}><div style={{background:palette.panel,border:`1px solid ${palette.rule}`,padding:"32px 36px",overflow:"hidden"}}><Mono palette={palette} style={{fontSize:18,color:palette.accent3}}>KEY IDENTITY</Mono><div style={{marginTop:22}}>{eqOn?<><Eq display tex={String.raw`|M_{nm}^{R\bar{R}}|^2 = |\boldsymbol{\varepsilon}|^4\omega_n\omega_m\big[g^{nm}_{\mu\mu} + \tfrac{1}{2}\Omega^{nm}_{xy}\big]`} palette={palette}/></>:<Body palette={palette} style={{color:palette.inkFaint,fontStyle:"italic"}}>(equations hidden)</Body>}</div><Small palette={palette} style={{marginTop:22,color:palette.inkFaint}}>Vertex squared in cross-circular channel = inter-band quantum geometric tensor.</Small></div></div></div><Footer palette={palette} num={num} total={total} label="Formalism"/></Frame>;
+S.geomintegral=({palette,num,total,eqOn})=><Frame palette={palette} label="17 Geometric integral"><Eyebrow palette={palette}>&#167; 17&nbsp;&middot;&nbsp;Geometric integral</Eyebrow><Title palette={palette}>Raman response as a geometric integral</Title><div style={{marginTop:SPACING.titleGap,display:"flex",flexDirection:"column",gap:36,flex:1}}><Body palette={palette} style={{maxWidth:1400}}>Inserting the geometric form into I(&#969;):</Body>{eqOn&&<div style={{background:palette.panel,border:`1px solid ${palette.rule}`,padding:"36px 48px"}}><Eq display tex={String.raw`\boxed{\;I_{R\bar{R}}(\omega) \propto \int\!\frac{d^2k}{(2\pi)^2}\,\big[g^{+-}_{\mu\mu} + \tfrac{1}{2}\Omega^{+-}_{xy}\big]\,\delta\!\big(\omega - \omega_+ - \omega_-\big)\;}`} palette={palette}/></div>}<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:36}}>{[{t:"Linear xx",body:<>Probes <Eq tex="g_{\mu\mu}" palette={palette}/> only. Symmetric, structureless continuum.</>},{t:"Linear xy",body:<>Probes off-diagonal metric and antisymmetric inter-band tensor.</>},{t:"Circular RL̅",body:<>Linear in <Eq tex="\Omega_{xy}^{+-}" palette={palette}/>. <span style={{color:palette.accent3}}>Sign reverses with magnetisation.</span></>}].map((c,i)=><div key={i} style={{display:"flex",flexDirection:"column",gap:16,paddingTop:20,borderTop:`1px solid ${palette.rule}`}}><Mono palette={palette} style={{color:palette.accent}}>0{i+1}</Mono><Subtitle palette={palette} style={{fontStyle:"normal",fontSize:32,color:palette.ink}}>{c.t}</Subtitle><Small palette={palette}>{c.body}</Small></div>)}</div></div><Footer palette={palette} num={num} total={total} label="Geometric integral"/></Frame>;
+S.partIII=({palette,num,total})=>S.section({palette,num,total,label:"18 Part III",kicker:"Part III",title:<>Probing quantum geometry <span style={{fontStyle:"italic",color:palette.accent}}>with light</span></>,subtitle:"Predictions for monolayer CrI&#8323;: lineshape, polarization signatures, and how to tell topological from trivial."});
+S.cri3raman=({palette,num,total})=><Frame palette={palette} label="19 CrI3 Raman"><Eyebrow palette={palette}>&#167; 19&nbsp;&middot;&nbsp;CrI&#8323; prediction</Eyebrow><Title palette={palette}>Geometric Raman response in CrI&#8323;</Title><div style={{marginTop:SPACING.titleGap,display:"grid",gridTemplateColumns:"1fr 1fr",gap:72,flex:1}}><div style={{display:"flex",flexDirection:"column",gap:24,justifyContent:"center"}}><RamanLineshape palette={palette} w={700} h={380} channel="xx" twoBumps/><Caption palette={palette} num={9}>xx-channel: broad two-magnon continuum with sub-features tracking the joint density of states near the K-gap.</Caption></div><div style={{display:"flex",flexDirection:"column",gap:28,justifyContent:"center"}}><Body palette={palette}>Predicted spectrum spans &#969; &#8712; [0, 2&#969;&#8331;&#7480;&#7481;]; structure tracks the joint density of states. The K-gap survives as a step at 2&#916;_K.</Body><Body palette={palette}>Total intensity is geometric: an integral of g + &#937; against the magnon JDOS.</Body></div></div><Footer palette={palette} num={num} total={total} label="CrI&#8323; Raman"/></Frame>;
+S.polsig=({palette,num,total})=><Frame palette={palette} label="20 Polarization sig"><Eyebrow palette={palette}>&#167; 20&nbsp;&middot;&nbsp;Signatures</Eyebrow><Title palette={palette}>Polarization-resolved signatures of Berry curvature</Title><div style={{marginTop:SPACING.titleGap,display:"grid",gridTemplateColumns:"1.2fr 1fr",gap:64,flex:1}}><div style={{display:"flex",flexDirection:"column",gap:16,justifyContent:"center"}}><RamanLineshape palette={palette} w={760} h={200} channel="xx"/><RamanLineshape palette={palette} w={760} h={200} channel="xy"/><Caption palette={palette} num={10}>xx vs xy two-magnon spectra. The cross-circular asymmetry isolates &#937;&#8339;&#8339;&#8314;&#8315;.</Caption></div><div style={{display:"flex",flexDirection:"column",gap:24,justifyContent:"center"}}><Body palette={palette}>Three distinguishing observables:</Body><NumItem palette={palette} n={1}>Cross-circular dichroism that <i>flips with magnetisation</i>.</NumItem><NumItem palette={palette} n={2}>Sub-gap step at 2&#916;_K in xy but not in xx.</NumItem><NumItem palette={palette} n={3}>Integrated weight in RL&#773; tracks C&#8314; through a sum rule.</NumItem></div></div><Footer palette={palette} num={num} total={total} label="Signatures"/></Frame>;
+S.toptrivial=({palette,num,total})=><Frame palette={palette} label="21 Top vs trivial"><Eyebrow palette={palette}>&#167; 21&nbsp;&middot;&nbsp;Diagnostic</Eyebrow><Title palette={palette}>Distinguishing topological vs trivial phases</Title><div style={{marginTop:SPACING.titleGap,display:"grid",gridTemplateColumns:"1fr 1fr",gap:72,flex:1}}><div style={{display:"flex",flexDirection:"column",gap:16,justifyContent:"center"}}><div style={{display:"flex",gap:16}}><div style={{display:"flex",flexDirection:"column",gap:8,alignItems:"center"}}><Mono palette={palette} style={{color:palette.accent}}>D &#8800; 0 (topological)</Mono><RamanLineshape palette={palette} w={360} h={240} channel="xy"/></div><div style={{display:"flex",flexDirection:"column",gap:8,alignItems:"center"}}><Mono palette={palette} style={{color:palette.inkDim}}>D = 0 (trivial)</Mono><RamanLineshape palette={palette} w={360} h={240} channel="xx"/></div></div><Caption palette={palette} num={11}>Cross-channel response vanishes when D=0; non-zero DM produces a finite RL&#773; signal.</Caption></div><div style={{display:"flex",flexDirection:"column",gap:24,justifyContent:"center"}}><Body palette={palette}>Tune DM via strain or interlayer coupling. The cross-circular Raman intensity scales with |D|.</Body><Small palette={palette} style={{color:palette.inkFaint}}>Caveat: phonon backgrounds in the same window need careful subtraction.</Small></div></div><Footer palette={palette} num={num} total={total} label="Diagnostic"/></Frame>;
+S.compare=({palette,num,total})=><Frame palette={palette} label="22 Comparison"><Eyebrow palette={palette}>&#167; 22&nbsp;&middot;&nbsp;Compared</Eyebrow><Title palette={palette}>Compared with thermal-Hall and INS probes</Title><div style={{marginTop:SPACING.titleGap,flex:1,display:"flex",flexDirection:"column",justifyContent:"center"}}><table style={{borderCollapse:"collapse",fontFamily:FONT_SERIF,fontSize:TYPE_SCALE.small,color:palette.ink,width:"100%"}}><thead><tr style={{borderBottom:`2px solid ${palette.accent}`}}>{["Probe","Couples to","k-resolution","Geometric content","Sign-resolved"].map((h,i)=><th key={i} style={{textAlign:"left",padding:"20px 16px",fontFamily:FONT_MONO,fontSize:TYPE_SCALE.micro,letterSpacing:"0.1em",color:palette.inkDim,fontWeight:400,textTransform:"uppercase"}}>{h}</th>)}</tr></thead><tbody>{[["INS","&#969;(k), spin&#8211;spin S(q,&#969;)","full BZ","indirect (bands only)","no"],["Thermal Hall &#954;ₓᵧ","BZ-integrated &#937;&#183;n(&#969;)","none (dc)","Berry curvature, single number","yes"],["Linear Raman (xx)","two-magnon JDOS","none","metric weight","no"],["Circular Raman (RL&#773;)","joint &#937; + g","none","k-summed &#937;, frequency-resolved","yes"]].map((row,i)=><tr key={i} style={{borderBottom:`1px solid ${palette.rule}`}}>{row.map((c,j)=><td key={j} style={{padding:"20px 16px",fontStyle:j===0?"italic":"normal",color:j===0?palette.accent:palette.ink}} dangerouslySetInnerHTML={{__html:c}}/>)}</tr>)}</tbody></table></div><Footer palette={palette} num={num} total={total} label="Compared"/></Frame>;
+S.summary=({palette,num,total})=><Frame palette={palette} label="23 Summary"><Eyebrow palette={palette}>&#167; 23&nbsp;&middot;&nbsp;Summary</Eyebrow><Title palette={palette}>Summary</Title><div style={{marginTop:SPACING.titleGap,flex:1,display:"grid",gridTemplateColumns:"1fr 1fr",gap:64}}><div style={{display:"flex",flexDirection:"column",gap:SPACING.itemGap}}><NumItem palette={palette} n={1}>Magnon bands carry a <i>quantum geometric tensor</i>: metric g + curvature &#937;.</NumItem><NumItem palette={palette} n={2}>The Fleury&#8211;Loudon vertex projects this tensor onto observable Raman intensities.</NumItem><NumItem palette={palette} n={3}>Cross-circular two-magnon Raman is a direct probe of &#937;ₓᵧ&#8314;&#8315;.</NumItem><NumItem palette={palette} n={4}>For monolayer CrI&#8323;: predicted dichroism flips with magnetisation and vanishes at D=0.</NumItem></div><div style={{display:"flex",flexDirection:"column",gap:24,justifyContent:"center",padding:"36px 40px",border:`1px solid ${palette.rule}`,background:palette.panel}}><Mono palette={palette} style={{color:palette.accent}}>WHAT&#39;S NEXT</Mono><Small palette={palette}>Resonant regime: include intermediate excitonic states; finite-temperature corrections via Bogoliubov self-energies.</Small><Small palette={palette}>Beyond CrI&#8323;: kagome ferromagnets, antiferromagnetic honeycombs, frustrated DM systems.</Small><Small palette={palette}>Experimental collaboration: low-T polarised micro-Raman on encapsulated monolayers.</Small></div></div><Footer palette={palette} num={num} total={total} label="Summary"/></Frame>;
+S.thanks=({palette,num,total})=><Frame palette={palette} bg={palette.bgAlt} label="24 Thanks"><div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",gap:56}}><Eyebrow palette={palette} accent>Thank you</Eyebrow><h1 style={{fontFamily:FONT_SERIF,fontWeight:500,fontSize:132,lineHeight:1,letterSpacing:"-0.015em",color:palette.ink,margin:0,fontStyle:"italic"}}>Questions?</h1><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:64,marginTop:32,maxWidth:1500}}><div><Mono palette={palette} style={{color:palette.accent}}>ACKNOWLEDGEMENTS</Mono><div style={{marginTop:16,display:"flex",flexDirection:"column",gap:10}}><Small palette={palette}>Collaborators in the magnetism theory group</Small><Small palette={palette}>Funding: institutional and project grants</Small></div></div><div><Mono palette={palette} style={{color:palette.accent}}>KEY REFERENCES</Mono><div style={{marginTop:16,display:"flex",flexDirection:"column",gap:10}}><Small palette={palette}>Chen <i>et al.</i>, PRX 8, 041028 (2018).</Small><Small palette={palette}>Bonbien <i>et al.</i>, npj QM (2024).</Small><Small palette={palette}>Fleury &amp; Loudon, Phys. Rev. 166, 514 (1968).</Small></div></div></div></div><Footer palette={palette} num={num} total={total} label="Thanks"/></Frame>;
+window.S=S;
+</script>
+
+<!-- ── Editor app ── -->
+<script type="text/babel" data-presets="env,react">
+const SLIDES=[
+  {key:'cover',label:'01 Cover'},{key:'motivation',label:'02 Motivation'},{key:'outline',label:'03 Outline'},
+  {key:'partI',label:'04 Part I'},{key:'lswt',label:'05 LSWT'},{key:'berry',label:'06 Berry curvature'},
+  {key:'metric',label:'07 Quantum metric'},{key:'topology',label:'08 Topology'},{key:'cri3',label:'09 CrI₃ platform'},
+  {key:'cri3bands',label:'10 CrI₃ bands'},{key:'cri3berry',label:'11 CrI₃ curvature'},{key:'partII',label:'12 Part II'},
+  {key:'fleury',label:'13 Fleury–Loudon'},{key:'twomag',label:'14 Two-magnon'},{key:'polarization',label:'15 Polarization'},
+  {key:'formalism',label:'16 Formalism'},{key:'geomintegral',label:'17 Geometric integral'},{key:'partIII',label:'18 Part III'},
+  {key:'cri3raman',label:'19 CrI₃ Raman'},{key:'polsig',label:'20 Pol. signatures'},{key:'toptrivial',label:'21 Top vs trivial'},
+  {key:'compare',label:'22 Comparison'},{key:'summary',label:'23 Summary'},{key:'thanks',label:'24 Thanks'},
+];
+const FILES={slides:'jsx-slides',figures:'jsx-figures',primitives:'jsx-primitives',tokens:'jsx-tokens'};
+const ANIMS={
+  none:{label:'None',css:'',icon:'■'},
+  fade:{label:'Fade In',css:'anim-fade-in',icon:'○'},
+  'slide-up':{label:'Slide Up',css:'anim-slide-up',icon:'↑'},
+  'slide-left':{label:'From Left',css:'anim-slide-left',icon:'←'},
+  'slide-right':{label:'From Right',css:'anim-slide-right',icon:'→'},
+  zoom:{label:'Zoom In',css:'anim-zoom-in',icon:'◎'},
+};
+const ANIM_CSS={
+  fade:`animation: fade-in 600ms ease both;\n\n@keyframes fade-in {\n  from { opacity: 0; }\n  to   { opacity: 1; }\n}`,
+  'slide-up':`animation: slide-up 600ms ease both;\n\n@keyframes slide-up {\n  from { opacity: 0; transform: translateY(48px); }\n  to   { opacity: 1; transform: none; }\n}`,
+  'slide-left':`animation: slide-left 600ms ease both;\n\n@keyframes slide-left {\n  from { opacity: 0; transform: translateX(-80px); }\n  to   { opacity: 1; transform: none; }\n}`,
+  'slide-right':`animation: slide-right 600ms ease both;\n\n@keyframes slide-right {\n  from { opacity: 0; transform: translateX(80px); }\n  to   { opacity: 1; transform: none; }\n}`,
+  zoom:`animation: zoom-in 500ms ease both;\n\n@keyframes zoom-in {\n  from { opacity: 0; transform: scale(0.88); }\n  to   { opacity: 1; transform: none; }\n}`,
+};
+
+function getFileSource(fileKey){
+  const el=document.getElementById(FILES[fileKey]);
+  return el?el.textContent.trim():'';
+}
+
+function EditorApp(){
+  const [slideIdx,setSlideIdx]=React.useState(0);
+  const [tweaks,setTweaks]=React.useState({palette:'cyan',showEquations:true,titleStyle:'noun',figVariant:'default'});
+  const [activeTab,setActiveTab]=React.useState('code');
+  const [activeFile,setActiveFile]=React.useState('slides');
+  const [code,setCode]=React.useState(()=>getFileSource('slides'));
+  const [error,setError]=React.useState(null);
+  const [success,setSuccess]=React.useState(false);
+  const [renderKey,setRenderKey]=React.useState(0);
+  const [animPreset,setAnimPreset]=React.useState('none');
+  const [animDur,setAnimDur]=React.useState(600);
+  const [animDelay,setAnimDelay]=React.useState(0);
+  const [animEase,setAnimEase]=React.useState('ease');
+  const [animPlaying,setAnimPlaying]=React.useState(false);
+  const canvasAreaRef=React.useRef(null);
+  const [scale,setScale]=React.useState(1);
+
+  React.useEffect(()=>{
+    function updateScale(){
+      if(!canvasAreaRef.current)return;
+      const r=canvasAreaRef.current.getBoundingClientRect();
+      setScale(Math.min(r.width/1920,r.height/1080)*0.94);
+    }
+    updateScale();
+    const ro=new ResizeObserver(updateScale);
+    if(canvasAreaRef.current)ro.observe(canvasAreaRef.current);
+    return()=>ro.disconnect();
+  },[]);
+
+  React.useEffect(()=>{
+    setCode(getFileSource(activeFile));
+    setError(null);setSuccess(false);
+  },[activeFile]);
+
+  React.useEffect(()=>{
+    function onKey(e){
+      const t=e.target;
+      if(t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)))return;
+      if(e.key==='ArrowRight'||e.key===' ')goTo(slideIdx+1);
+      else if(e.key==='ArrowLeft')goTo(slideIdx-1);
+    }
+    window.addEventListener('keydown',onKey);
+    return()=>window.removeEventListener('keydown',onKey);
+  },[slideIdx]);
+
+  function goTo(i){setSlideIdx(Math.max(0,Math.min(SLIDES.length-1,i)));}
+
+  function applyCode(){
+    try{
+      const compiled=Babel.transform(code,{presets:['env','react']}).code;
+      (0,eval)(compiled);
+      setError(null);setSuccess(true);setRenderKey(k=>k+1);
+      setTimeout(()=>setSuccess(false),2500);
+    }catch(e){setError(e.message);}
+  }
+
+  function handleKeyDown(e){
+    if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();applyCode();return;}
+    if(e.key==='Tab'){
+      e.preventDefault();
+      const ta=e.target,s=ta.selectionStart,en=ta.selectionEnd;
+      setCode(code.slice(0,s)+'  '+code.slice(en));
+      requestAnimationFrame(()=>{ta.selectionStart=ta.selectionEnd=s+2;});
+    }
+  }
+
+  function previewAnim(){
+    if(animPreset==='none')return;
+    setAnimPlaying(false);
+    setTimeout(()=>setAnimPlaying(true),20);
+    setTimeout(()=>setAnimPlaying(false),animDur+animDelay+100);
+  }
+
+  const palette=PALETTES[tweaks.palette]||PALETTES.cyan;
+  const ctx={palette,total:SLIDES.length,eqOn:tweaks.showEquations,titleStyle:tweaks.titleStyle,figVariant:tweaks.figVariant};
+  const animClass=animPlaying&&animPreset!=='none'?ANIMS[animPreset]?.css:'';
+  const currentFn=window.S&&window.S[SLIDES[slideIdx].key];
+  const animCodeText=animPreset==='none'
+    ?'/* Select an animation above */'
+    :(ANIM_CSS[animPreset]||'').replace(/600ms|500ms/g,animDur+'ms');
+
+  return(
+    <div id="editor-root">
+      <div id="toolbar">
+        <span id="toolbar-title">Slide Editor — Quantum Geometry of Magnon Bands</span>
+        <div id="toolbar-mid">
+          <button className="tb-btn icon" onClick={()=>goTo(slideIdx-1)} title="Previous (←)">&#8592;</button>
+          <span id="slide-counter">{slideIdx+1} / {SLIDES.length}</span>
+          <button className="tb-btn icon" onClick={()=>goTo(slideIdx+1)} title="Next (→)">&#8594;</button>
+        </div>
+        <button className="tb-btn" onClick={()=>window.open('Quantum Geometry of Magnon Bands.html','_blank')}>&#9654; Present</button>
+      </div>
+      <div id="editor-body">
+        <div id="slide-list">
+          {SLIDES.map((sl,i)=>{
+            const fn=window.S&&window.S[sl.key];
+            return(
+              <div key={sl.key} className={`slide-item${i===slideIdx?' active':''}`} onClick={()=>setSlideIdx(i)}>
+                <div className="slide-num">{String(i+1).padStart(2,'0')}</div>
+                <div className="slide-thumb-wrap">
+                  <div className="slide-thumb-inner">
+                    {fn?fn({...ctx,num:i+1,eqOn:false}):null}
+                  </div>
+                </div>
+                <div className="slide-label-col">{sl.label.slice(3)}</div>
+              </div>
+            );
+          })}
+        </div>
+        <div id="canvas-area" ref={canvasAreaRef}>
+          <div id="canvas-wrap" style={{width:1920*scale,height:1080*scale,position:'relative',flexShrink:0}}>
+            <div
+              key={renderKey}
+              className={animClass}
+              style={{
+                width:1920,height:1080,
+                transform:`scale(${scale})`,transformOrigin:'top left',
+                position:'absolute',top:0,left:0,
+                '--anim-dur':animDur+'ms',
+                '--anim-delay':animDelay+'ms',
+                '--anim-ease':animEase,
+              }}
+            >
+              {currentFn?currentFn({...ctx,num:slideIdx+1}):null}
+            </div>
+            <div style={{position:'absolute',inset:-1,border:'1px solid #2a3140',pointerEvents:'none',zIndex:1}}/>
+          </div>
+        </div>
+        <div id="side-panel">
+          <div id="panel-tabs">
+            {['code','tweaks','animate'].map(tab=>(
+              <button key={tab} className={`ptab${activeTab===tab?' active':''}`} onClick={()=>setActiveTab(tab)}>
+                {tab==='code'?'Code':tab==='tweaks'?'Tweaks':'Animate'}
+              </button>
+            ))}
+          </div>
+          <div id="panel-body">
+            <div className={`tab-content${activeTab==='code'?'':' hidden'}`} id="tab-code">
+              <div id="file-selector">
+                {Object.keys(FILES).map(f=>(
+                  <button key={f} className={`file-btn${activeFile===f?' active':''}`} onClick={()=>setActiveFile(f)}>
+                    {f}.jsx
+                  </button>
+                ))}
+              </div>
+              <textarea
+                id="code-editor"
+                spellCheck={false}
+                value={code}
+                onChange={e=>setCode(e.target.value)}
+                onKeyDown={handleKeyDown}
+              />
+              {error&&<div id="error-box">{error}</div>}
+              {success&&<div id="success-box">&#10003; Applied successfully</div>}
+              <div id="code-actions">
+                <button id="apply-btn" onClick={applyCode}>Apply (&#8984;&#8629;)</button>
+                <span id="apply-hint">Edits recompile live via Babel</span>
+              </div>
+            </div>
+            <div className={`tab-content${activeTab==='tweaks'?'':' hidden'}`} id="tab-tweaks">
+              <div className="tweak-section">Palette</div>
+              <div className="tweak-row">
+                <label className="tweak-label">Accent colour</label>
+                <select className="tweak-select" value={tweaks.palette} onChange={e=>setTweaks(t=>({...t,palette:e.target.value}))}>
+                  <option value="cyan">Cyan / magenta</option>
+                  <option value="amber">Amber / teal</option>
+                  <option value="violet">Violet / lime</option>
+                </select>
+              </div>
+              <div className="tweak-section">Display</div>
+              <div className="tweak-row">
+                <div className="tweak-toggle">
+                  <span className="tweak-label">Show equations</span>
+                  <button className="toggle-btn" data-on={tweaks.showEquations?'1':'0'} onClick={()=>setTweaks(t=>({...t,showEquations:!t.showEquations}))}></button>
+                </div>
+              </div>
+              <div className="tweak-row">
+                <label className="tweak-label">Title style</label>
+                <div className="tweak-seg">
+                  <button className={`seg-btn${tweaks.titleStyle==='noun'?' active':''}`} onClick={()=>setTweaks(t=>({...t,titleStyle:'noun'}))}>Noun-phrase</button>
+                  <button className={`seg-btn${tweaks.titleStyle==='action'?' active':''}`} onClick={()=>setTweaks(t=>({...t,titleStyle:'action'}))}>Action</button>
+                </div>
+              </div>
+              <div className="tweak-section">Figures</div>
+              <div className="tweak-row">
+                <label className="tweak-label">Slide 10 — magnon bands</label>
+                <div className="tweak-seg">
+                  <button className={`seg-btn${tweaks.figVariant==='default'?' active':''}`} onClick={()=>setTweaks(t=>({...t,figVariant:'default'}))}>DM gap</button>
+                  <button className={`seg-btn${tweaks.figVariant==='nogap'?' active':''}`} onClick={()=>setTweaks(t=>({...t,figVariant:'nogap'}))}>Gapless</button>
+                </div>
+              </div>
+            </div>
+            <div className={`tab-content${activeTab==='animate'?'':' hidden'}`} id="tab-animate" style={{overflowY:'auto',padding:'0 0 16px'}}>
+              <div className="tweak-section" style={{paddingTop:10}}>Slide entrance animation</div>
+              <div className="anim-grid">
+                {Object.entries(ANIMS).map(([key,anim])=>(
+                  <button key={key} className={`anim-card${animPreset===key?' active':''}`} onClick={()=>setAnimPreset(key)}>
+                    <span className="anim-icon">{anim.icon}</span>{anim.label}
+                  </button>
+                ))}
+              </div>
+              <div className="anim-params">
+                <div className="anim-param-row">
+                  <label>Duration</label>
+                  <input type="range" min="200" max="1200" step="50" value={animDur} onChange={e=>setAnimDur(+e.target.value)}/>
+                  <span>{animDur}ms</span>
+                </div>
+                <div className="anim-param-row">
+                  <label>Delay</label>
+                  <input type="range" min="0" max="800" step="50" value={animDelay} onChange={e=>setAnimDelay(+e.target.value)}/>
+                  <span>{animDelay}ms</span>
+                </div>
+                <div className="anim-param-row">
+                  <label>Easing</label>
+                  <select className="tweak-select" style={{flex:1,height:24,fontSize:11}} value={animEase} onChange={e=>setAnimEase(e.target.value)}>
+                    <option value="ease">ease</option>
+                    <option value="ease-in">ease-in</option>
+                    <option value="ease-out">ease-out</option>
+                    <option value="ease-in-out">ease-in-out</option>
+                    <option value="cubic-bezier(0.34,1.56,0.64,1)">spring</option>
+                  </select>
+                </div>
+              </div>
+              <button className="anim-preview-btn" onClick={previewAnim}>&#9654; Preview animation</button>
+              <div className="anim-code-label">Generated CSS to paste into your slide</div>
+              <div className="anim-code-block">{animCodeText}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function waitReady(fn){
+  if(window.katex&&window.S&&window.PALETTES)fn();
+  else setTimeout(()=>waitReady(fn),60);
+}
+
+waitReady(()=>{
+  ReactDOM.createRoot(document.getElementById('app')).render(<EditorApp/>);
+});
+</script>
+</body>
+</html>
